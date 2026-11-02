@@ -321,7 +321,7 @@ export default function Surface({ onFlow }) {
 // 반지름 1인 곡면의 광학 층. 움직임 그룹 안에 두어 라벨과 같은 중심을 유지한다.
 function DropOptics({ radius }) {
   return (
-    <g transform={`scale(${radius})`}>
+    <g className="drops__optics" transform={`scale(${radius})`}>
       <circle r="1" fill="url(#lens)" />
       <circle r="0.995" fill="none" stroke="url(#rim)" strokeWidth="0.018" />
       <path d="M -.77 -.28 C -.72 -.73, -.31 -.94, .12 -.79 C -.2 -.81, -.53 -.56, -.59 -.23 Z" fill="url(#glassReflection)" filter="url(#opticalSoft)" />
