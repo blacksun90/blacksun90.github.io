@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createEngine } from './engine.js'
 
 // React 는 마운트와 상태만 넘긴다. 그리기는 engine.js(three.js)가 맡는다.
-export default function Graph3D({ graph, preset, selected, query, hullMode, onSelect }) {
+export default function Graph3D({ graph, preset, selected, focused, query, hullMode, onSelect }) {
   const ref = useRef(null)
   const eng = useRef(null)
   const first = useRef(true)
@@ -33,10 +33,10 @@ export default function Graph3D({ graph, preset, selected, query, hullMode, onSe
   useEffect(() => {
     const e = eng.current
     if (!e) return
-    e.setState({ selected, query })
-    if (!first.current) e.frame(selected, !!selected, false)
+    e.setState({ selected: focused, query })
+    if (!first.current) e.frame(focused, !!selected, false)
     first.current = false
-  }, [selected, query])
+  }, [selected, focused, query])
   // 막 모드는 카메라와 무관
   useEffect(() => {
     eng.current?.setState({ hullMode })

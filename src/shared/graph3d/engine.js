@@ -14,6 +14,7 @@ import { makeLinks, makeStars } from './links.js'
 import { makeParticles, makeHulls } from './effects.js'
 import { makeLabels } from './labels.js'
 import { availRect, computeFrame, flyTo } from './camera.js'
+import { titleScope } from './titleScope.js'
 
 const REDUCED = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const NARROW = () => window.matchMedia('(max-width: 760px)').matches
@@ -28,6 +29,7 @@ export function createEngine(container, graph, preset, { onSelect }) {
   const hidden = (n) => !!preset.hideSkills && n?.type === 'skill'
   const endOf = (x) => (typeof x === 'object' ? x : byId.get(x)) // layout 전엔 id, StrictMode 재마운트 뒤엔 객체
   const nodes = graph.nodes.filter((n) => !hidden(n))
+  const visibleIds = new Set(nodes.map((n) => n.id))
   const links = graph.links.filter((l) => !hidden(endOf(l.source)) && !hidden(endOf(l.target)))
   const view = { nodes, links, byId, neighbors }
   layout(view, preset)
@@ -111,6 +113,7 @@ export function createEngine(container, graph, preset, { onSelect }) {
     const hnear = hov ? neighbors.get(hov) || new Set() : new Set()
     const q = state.query.trim().toLowerCase()
     const match = (n) => !q || n.label.toLowerCase().includes(q)
+    const titles = titleScope(graph, sel, visibleIds)
     for (const n of nodes) {
       const isSel = n.id === sel
       const isNear = near.has(n.id)
@@ -118,7 +121,7 @@ export function createEngine(container, graph, preset, { onSelect }) {
       const isHNear = hnear.has(n.id)
       const dim = (focus && !isSel && !isNear) || !match(n)
       N.setTarget(n.id, { opacity: dim ? 0.14 : 1, glow: isSel || isNear || isHov || isHNear ? 1 : dim ? 0.1 : 0.5, lit: isSel ? 1 : isHov ? 0.5 : 0 })
-      labels.set(n.id, { sel: isSel, near: isNear, hover: isHov, hnear: isHNear, match: !!q && match(n), dim })
+      labels.set(n.id, { sel: isSel, near: isNear, hover: isHov, hnear: isHNear, match: !!q && match(n), dim, title: titles.has(n.id) })
     }
     links.forEach((l, i) => {
       const a = l.source.id
@@ -132,7 +135,7 @@ export function createEngine(container, graph, preset, { onSelect }) {
       for (const it of hulls.items) {
         const touched = (!!sel && it.cluster.memberIds.has(sel)) || (!!hov && it.cluster.memberIds.has(hov))
         it.target = state.hullMode === 'off' ? 0 : state.hullMode === 'hover' ? (touched ? 1 : 0) : focus ? (touched ? 1 : 0.3) : 1
-        it.label = !NARROW() || touched // 좁은 화면의 낮은 띠에선 이름표가 겹치므로 고른·올린 묶음만
+        it.label = false // 제목은 노드의 탐색 계층으로만 표시하고 묶음 설명은 중복하지 않는다.
       }
     }
     controls.autoRotate = preset.autoRotate > 0 && !NARROW() && !reduced && (!sel || sel === 'me') && !interacted

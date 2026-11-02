@@ -66,6 +66,10 @@
   opacity: 0 !important;
   pointer-events: none !important;
 }
+.g3-label.is-title { opacity: 1; pointer-events: auto; }
+.g3-label.is-title.is-born:not(.is-dim) { opacity: 1 !important; }
+.g3-label:not(.is-title) { opacity: 0 !important; pointer-events: none !important; }
+.g3.is-far .g3-label.is-title { opacity: 1; }
 .g3-label--person {
   font-size: 14px;
   font-weight: 800;

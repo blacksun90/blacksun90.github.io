@@ -48,7 +48,7 @@ export function makeLabels(nodes, meshes, clusterList, hulls, { onSelect, onHove
     group,
     items,
     // 상태 → 클래스. 보이는 라벨만 Tab 순서에 든다(숨은 채 포커스되는 것이 가장 헷갈린다).
-    set(id, { sel, near, hover, hnear, match, dim }) {
+    set(id, { sel, near, hover, hnear, match, dim, title }) {
       const it = items.get(id)
       const el = it.el
       el.classList.toggle('is-selected', sel)
@@ -57,13 +57,15 @@ export function makeLabels(nodes, meshes, clusterList, hulls, { onSelect, onHove
       el.classList.toggle('is-hover-near', hnear)
       el.classList.toggle('is-match', match)
       el.classList.toggle('is-dim', dim)
-      it.tabIndex = (it.on || sel || near || match) && !dim ? 0 : -1
-      el.tabIndex = window.matchMedia('(max-width: 760px)').matches && !dim ? 0 : it.tabIndex
+      el.classList.toggle('is-title', title)
+      it.title = title
+      it.tabIndex = title && !dim ? 0 : -1
+      el.tabIndex = it.tabIndex
     },
     sync() {
       const mobile = window.matchMedia('(max-width: 760px)').matches
       for (const [id, it] of items) {
-        it.el.tabIndex = mobile ? (it.el.classList.contains('is-dim') || it.el.style.visibility === 'hidden' ? -1 : 0) : (it.tabIndex ?? (it.on ? 0 : -1))
+        it.el.tabIndex = it.title && it.born && !it.el.classList.contains('is-dim') && (!mobile || it.el.style.visibility !== 'hidden') ? 0 : -1
         const p = meshes.get(id).position
         it.obj.position.set(p.x, p.y + it.up, p.z)
         // 이름표는 점이 맺힌 뒤에(등장 중엔 점보다 먼저 뜨지 않게)
@@ -96,7 +98,7 @@ export function makeLabels(nodes, meshes, clusterList, hulls, { onSelect, onHove
       for (const { it, box } of boxes) {
         const el = it.el
         let placed = false
-        if (it.born && !el.classList.contains('is-dim') && box.width && box.height) {
+        if (it.title && it.born && !el.classList.contains('is-dim') && box.width && box.height) {
           const x = Math.max(rect.x + 8, Math.min(box.left, rect.x + rect.w - box.width - 8))
           const y = Math.max(rect.y + 8, Math.min(box.top, rect.y + rect.h - box.height - 8))
           for (const [dx, dy] of [[0, 0], [0, -30], [0, 30], [-36, 0], [36, 0], [0, -60], [0, 60]]) {

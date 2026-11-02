@@ -16,9 +16,11 @@ export default function App3D() {
   const graph = useMemo(() => buildGraph(), [])
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches)
   const [selected, setSelected] = useState(() => window.matchMedia('(max-width: 760px)').matches ? null : 'me')
+  const [focused, setFocused] = useState(() => window.matchMedia('(max-width: 760px)').matches ? null : 'me')
   const [query, setQuery] = useState('')
   const [hullMode, setHullMode] = useState('on')
   const node = selected ? graph.byId.get(selected) : null
+  const selectNode = (id) => { setFocused(id); setSelected(id) }
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)')
@@ -37,7 +39,7 @@ export default function App3D() {
         return
       }
       if (e.key === 'Escape') setSelected(null)
-      if (e.key === '?') setSelected('me')
+      if (e.key === '?') { setFocused('me'); setSelected('me') }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -64,7 +66,7 @@ export default function App3D() {
           role="search"
           onSubmit={(e) => {
             e.preventDefault()
-            if (matches[0]) setSelected(matches[0].id)
+            if (matches[0]) selectNode(matches[0].id)
           }}
         >
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="찾기 — 회사, 프로젝트, 기술" aria-label="그래프에서 찾기" />
@@ -97,11 +99,11 @@ export default function App3D() {
       </header>
 
       <main className="stage">
-        <Graph3D key={mobile ? 'mobile' : 'desktop'} graph={graph} preset={preset} selected={selected} query={query} hullMode={hullMode} onSelect={setSelected} />
+        <Graph3D key={mobile ? 'mobile' : 'desktop'} graph={graph} preset={preset} selected={selected} focused={focused} query={query} hullMode={hullMode} onSelect={selectNode} />
         <p className="stage__hint">점을 누르면 오른쪽에 내용이 열려요 · 끌어서 돌리기, 휠로 확대, 오른쪽 버튼으로 옮기기 · Esc 닫기 · ? 소개</p>
       </main>
 
-      <Panel node={node} fullscreen={mobile} onSelect={setSelected} onClose={() => setSelected(null)} />
+      <Panel node={node} fullscreen={mobile} onSelect={selectNode} onClose={() => setSelected(null)} />
     </div>
   )
 }
