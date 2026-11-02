@@ -177,9 +177,9 @@ ol {
   fill: rgba(6, 61, 82, 0.18);
 }
 /* 곡면은 유지하면서 장식보다 중앙 글자가 먼저 읽히도록 투명도를 낮춘다. */
-.drops__bodies circle { fill-opacity: 0.55; }
-.drops__optics { opacity: 0.45; }
-.drops__under { opacity: 0.55; }
+.drops__bodies circle { fill-opacity: 0.46; }
+.drops__optics { opacity: 0.37; }
+.drops__under { opacity: 0.46; }
 .drops__rings circle {
   fill: none;
   stroke: var(--white);
