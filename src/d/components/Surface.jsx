@@ -7,7 +7,7 @@ import { ripple as waterRipple } from '../motion/water.js'
 import Caustics from './Caustics.jsx'
 
 // 물 표면: 바닥은 WebGL 물(커스틱), 그 위에 SVG 물방울, 맨 위에 라벨 버튼.
-// 물방울 한 개 = 몸통(구이 필터 아래) + 피부(굴절 띠·림라이트·반사·하이라이트) + 바닥(그림자와 모인 빛).
+// 물방울 한 개 = 선명한 몸체 + 광학 층(굴절 띠·림라이트·곡면 반사) + 바닥(접촉 그림자·모인 빛).
 // 좌표 이동은 React가 바깥 <g transform=translate>로, GSAP의 드리프트·흔들림·확대는 안쪽 그룹에만 건다.
 // 안쪽 도형은 모두 (0,0) 기준이라 창 크기가 바뀌어도 scale 기준점이 물방울 중심에 머문다(라벨 어긋남 방지).
 
@@ -158,22 +158,22 @@ export default function Surface({ onFlow }) {
       <Caustics host={ref} />
       <svg className="drops" ref={svgRef} viewBox={`0 0 ${size.w} ${size.h}`} aria-hidden="true">
         <defs>
-          <filter id="goo" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="blur" />
-            <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" result="goo" />
-            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
-          </filter>
           <filter id="soft" x="-40%" y="-60%" width="180%" height="220%">
             <feGaussianBlur stdDeviation="7" />
           </filter>
           <filter id="soft-s" x="-40%" y="-60%" width="180%" height="220%">
             <feGaussianBlur stdDeviation="1.6" />
           </filter>
-          <radialGradient id="dropFill" cx="38%" cy="32%" r="72%">
-            <stop offset="0" stopColor="#ffffff" />
-            <stop offset="0.3" stopColor="#eaf8fb" />
-            <stop offset="0.78" stopColor="#bfe6f1" />
-            <stop offset="1" stopColor="#86cfe3" />
+          <filter id="opticalSoft" x="-25%" y="-25%" width="150%" height="150%">
+            <feGaussianBlur stdDeviation="0.018" />
+          </filter>
+          <radialGradient id="dropFill" cx="42%" cy="34%" r="68%">
+            <stop offset="0" stopColor="#f6ffff" stopOpacity="0.94" />
+            <stop offset="0.4" stopColor="#e2f8fc" stopOpacity="0.8" />
+            <stop offset="0.7" stopColor="#c7eaf2" stopOpacity="0.82" />
+            <stop offset="0.88" stopColor="#70b9cc" stopOpacity="0.9" />
+            <stop offset="0.96" stopColor="#d8faff" stopOpacity="0.98" />
+            <stop offset="1" stopColor="#4f8fa3" stopOpacity="0.82" />
           </radialGradient>
           <radialGradient id="actionFill" cx="38%" cy="32%" r="72%">
             <stop offset="0" stopColor="#ffffff" />
@@ -182,15 +182,28 @@ export default function Surface({ onFlow }) {
           </radialGradient>
           {/* 굴절 띠: 가장자리로 갈수록 두꺼운 물이 빛을 꺾어 짙어졌다가 림에서 밝아진다 */}
           <radialGradient id="lens" cx="50%" cy="50%" r="50%">
-            <stop offset="0.6" stopColor="#0a8fb0" stopOpacity="0" />
-            <stop offset="0.84" stopColor="#0a8fb0" stopOpacity="0.26" />
-            <stop offset="0.93" stopColor="#ffffff" stopOpacity="0.5" />
-            <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+            <stop offset="0.56" stopColor="#0a6a86" stopOpacity="0" />
+            <stop offset="0.82" stopColor="#0a6a86" stopOpacity="0.06" />
+            <stop offset="0.93" stopColor="#145b73" stopOpacity="0.28" />
+            <stop offset="0.97" stopColor="#ffffff" stopOpacity="0.86" />
+            <stop offset="1" stopColor="#578e9d" stopOpacity="0.16" />
           </radialGradient>
           <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="0.5" stopColor="#ffffff" stopOpacity="0.15" />
-            <stop offset="1" stopColor="#0a8fb0" stopOpacity="0.55" />
+            <stop offset="0.34" stopColor="#ffffff" stopOpacity="0.35" />
+            <stop offset="0.64" stopColor="#91d6e4" stopOpacity="0.18" />
+            <stop offset="1" stopColor="#245d74" stopOpacity="0.7" />
+          </linearGradient>
+          <linearGradient id="glassReflection" x1="0" y1="0" x2="0.8" y2="1">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.98" />
+            <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.64" />
+            <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="lowerRefraction" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0" />
+            <stop offset="0.4" stopColor="#ffffff" stopOpacity="0.85" />
+            <stop offset="0.72" stopColor="#eaffff" stopOpacity="0.95" />
+            <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
           <radialGradient id="pooledLight" cx="50%" cy="50%" r="50%">
             <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
@@ -206,15 +219,16 @@ export default function Surface({ onFlow }) {
           {all.map((d) => (
             <g key={d.id} transform={`translate(${d.x} ${d.y})`}>
               <g className="drops__under-one" data-drop={d.id}>
-                <ellipse className="drops__shade" cx={d.r * 0.06} cy={d.r * 0.92} rx={d.r * 0.98} ry={d.r * 0.3} filter="url(#soft)" />
-                <ellipse className="drops__pooled" cx={d.r * 0.04} cy={d.r * 0.9} rx={d.r * 0.56} ry={d.r * 0.17} fill="url(#pooledLight)" />
+                <ellipse className="drops__shade" cx={d.r * 0.16} cy={d.r * 1.02} rx={d.r * 1.04} ry={d.r * 0.22} filter="url(#soft)" />
+                <ellipse className="drops__contact" cx={d.r * 0.08} cy={d.r * 0.94} rx={d.r * 0.66} ry={d.r * 0.09} filter="url(#soft-s)" />
+                <ellipse className="drops__pooled" cx={-d.r * 0.08} cy={d.r * 1.02} rx={d.r * 0.64} ry={d.r * 0.12} fill="url(#pooledLight)" />
               </g>
             </g>
           ))}
         </g>
 
-        {/* 몸통: 서로 가까우면 구이 필터가 이어 붙인다 */}
-        <g className="drops__goo" filter="url(#goo)">
+        {/* 몸체는 흐림 없이 그려 고해상도에서도 가장자리를 선명하게 유지한다. */}
+        <g className="drops__bodies">
           {items.map((d) => (
             <g key={d.id} transform={`translate(${d.x} ${d.y})`}>
               <g className="drops__body" data-drop={d.id}>
@@ -241,11 +255,7 @@ export default function Surface({ onFlow }) {
             <g key={d.id} transform={`translate(${d.x} ${d.y})`}>
               <g className="drops__skin" data-drop={d.id}>
                 <g>
-                  <circle cx={0} cy={0} r={d.r} fill="url(#lens)" />
-                  <circle cx={0} cy={0} r={d.r - 0.6} fill="none" stroke="url(#rim)" strokeWidth="1.2" />
-                  <ellipse className="drops__inner" cx={d.r * 0.3} cy={d.r * 0.42} rx={d.r * 0.24} ry={d.r * 0.1} filter="url(#soft-s)" />
-                  <ellipse className="drops__gloss" cx={-d.r * 0.32} cy={-d.r * 0.4} rx={d.r * 0.27} ry={d.r * 0.14} transform={`rotate(-28 ${-d.r * 0.32} ${-d.r * 0.4})`} />
-                  <circle className="drops__spark" cx={-d.r * 0.08} cy={-d.r * 0.62} r={Math.max(1.5, d.r * 0.055)} />
+                  <DropOptics radius={d.r} />
                 </g>
               </g>
             </g>
@@ -305,6 +315,23 @@ export default function Surface({ onFlow }) {
         </a>
       </nav>
     </section>
+  )
+}
+
+// 반지름 1인 곡면의 광학 층. 움직임 그룹 안에 두어 라벨과 같은 중심을 유지한다.
+function DropOptics({ radius }) {
+  return (
+    <g transform={`scale(${radius})`}>
+      <circle r="1" fill="url(#lens)" />
+      <circle r="0.995" fill="none" stroke="url(#rim)" strokeWidth="0.018" />
+      <path d="M -.77 -.28 C -.72 -.73, -.31 -.94, .12 -.79 C -.2 -.81, -.53 -.56, -.59 -.23 Z" fill="url(#glassReflection)" filter="url(#opticalSoft)" />
+      <path d="M -.87 -.03 A .88 .88 0 0 1 -.29 -.84" fill="none" stroke="#fff" strokeOpacity="0.86" strokeWidth="0.022" strokeLinecap="round" />
+      <ellipse cx="-.28" cy="-.65" rx=".15" ry=".055" transform="rotate(-28 -.28 -.65)" fill="#fff" fillOpacity="0.9" />
+      <path d="M -.77 .36 C -.58 .94, .33 1.03, .78 .4" fill="none" stroke="url(#lowerRefraction)" strokeWidth="0.075" filter="url(#opticalSoft)" />
+      <path d="M -.62 .66 C -.21 .95, .33 .91, .65 .58" fill="none" stroke="url(#lowerRefraction)" strokeWidth="0.022" />
+      <ellipse cx=".41" cy=".6" rx=".19" ry=".045" transform="rotate(-31 .41 .6)" fill="#fff" fillOpacity="0.74" filter="url(#opticalSoft)" />
+      <circle cx="-.59" cy="-.49" r=".026" fill="#fff" />
+    </g>
   )
 }
 
