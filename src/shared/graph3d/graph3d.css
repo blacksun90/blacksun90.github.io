@@ -1,0 +1,215 @@
+/* 시안 E-1·E-2·E-3 — 3D 그래프 공통. 바탕·상단·패널은 graph.css 를 그대로 쓰고, 여기엔 3D 캔버스와 DOM 라벨만. */
+.g3 {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.g3-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.g3-canvas:active {
+  cursor: grabbing;
+}
+.g3-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* 점 이름표 — 진짜 버튼. 평소엔 허브만 보이고, 가까이 가거나 고르거나 올리면 나머지도. */
+.g3-label {
+  position: absolute;
+  margin: 0;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #cfd7ff;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  text-shadow:
+    0 0 3px rgba(11, 16, 32, 0.95),
+    0 0 7px rgba(11, 16, 32, 0.9),
+    0 1px 2px rgba(11, 16, 32, 1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+.g3-label--on,
+.g3-label.is-selected,
+.g3-label.is-near,
+.g3-label.is-hover,
+.g3-label.is-hover-near,
+.g3-label.is-match,
+.g3.is-zoomed .g3-label {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* 멀리서 보면 허브 이름표도 옅게(사람·선택·이웃은 그대로) */
+.g3.is-far .g3-label--on:not(.g3-label--person):not(.is-selected):not(.is-near):not(.is-hover):not(.is-hover-near):not(.is-match) {
+  opacity: 0.38;
+}
+.g3-label.is-dim {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+/* 등장 중: 점이 맺히기 전엔 이름표도 없다 */
+.g3-label:not(.is-born) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.g3-label--person {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+}
+.g3-label.is-selected,
+.g3-label:hover,
+.g3-label:focus-visible {
+  color: #fff;
+}
+.g3-label.is-match {
+  color: var(--ai);
+}
+.g3-label:focus-visible {
+  outline: 2px solid var(--ai);
+  outline-offset: 0;
+}
+
+/* 묶음 막 이름표(e-3) — 누를 수 없는 글자 */
+.g3-pod {
+  position: absolute;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  background: rgba(11, 16, 32, 0.55);
+  border: 1px solid rgba(160, 178, 255, 0.18);
+  border-radius: 999px;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.g3-pod--career {
+  color: #9fe8ff;
+  border-color: rgba(55, 211, 255, 0.35);
+}
+.g3-pod--rd {
+  color: #a9f7df;
+  border-color: rgba(95, 240, 192, 0.35);
+}
+.g3-pod--ai {
+  color: #ffe0a0;
+  border-color: rgba(255, 200, 87, 0.35);
+}
+
+/* 범례: 프로젝트 전용 색(e-4) */
+.legend__project {
+  --c: #ff6fb5;
+}
+
+/* 상단: 시안 표시 칩, 막 토글 */
+.top__tag {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--fg);
+  vertical-align: 1px;
+  border: 1px solid rgba(160, 178, 255, 0.3);
+  border-radius: 999px;
+}
+.hull-toggle {
+  padding: 3px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--fg);
+  background: rgba(16, 23, 51, 0.8);
+  border: 1px solid rgba(160, 178, 255, 0.3);
+  border-radius: 999px;
+  transition: border-color 0.2s ease;
+}
+.hull-toggle:hover {
+  border-color: var(--rd);
+}
+.legend__hull::before {
+  display: none;
+}
+
+/* E-4의 복귀 줄도 카메라가 피하는 상단 높이에 포함한다. */
+.site--overview { --top-h: 116px; }
+.site--overview .top { padding-top: 40px; }
+.top__back {
+  position: absolute;
+  left: 24px;
+  top: 8px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid rgba(160, 178, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(11, 16, 32, 0.94);
+  color: var(--fg);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+.top__back:hover { border-color: var(--rd); }
+.top__back:focus-visible { outline: 2px solid var(--ai); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .site--overview { --top-h: 150px; }
+  .site--overview .top { padding-top: 56px; }
+  .site--overview .top__who { grid-area: 1 / 1; }
+  .site--overview .legend { grid-area: 1 / 2; gap: 7px; font-size: 0.65rem; }
+  .site--overview .top__search { grid-row: 2; }
+  .top__back { left: 16px; min-height: 40px; }
+}
+
+/* WebGL 이 없는 환경 */
+.g3-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--fg-muted);
+}
+.g3-fallback a {
+  color: var(--career);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .g3-label,
+  .g3-pod,
+  .hull-toggle {
+    transition: none;
+  }
+}
+@media (max-width: 760px) {
+  .g3-label {
+    font-size: 10px;
+  }
+  /* 낮은 띠에서 멀리 볼 때는 허브 이름표도 숨긴다(겹침). 사람·선택·이웃·호버·일치는 그대로 */
+  .g3.is-far .g3-label--on:not(.g3-label--person):not(.is-selected):not(.is-near):not(.is-hover):not(.is-hover-near):not(.is-match) {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .g3-label--person {
+    font-size: 13px;
+  }
+  .g3-pod {
+    font-size: 10px;
+  }
+}

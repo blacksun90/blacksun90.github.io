@@ -1,0 +1,30 @@
+# deps / build
+node_modules/
+dist/
+.vite/
+
+# local env / editor
+.env
+.env.*
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db
+
+# working rules and notes stay local — they mention LAN hosts, local paths and company context
+CLAUDE.md
+docs/
+.claude/
+.impeccable/
+PRODUCT.md
+DESIGN.md
+
+# raw material never enters this repo (originals live in ../portfolio-raw)
+raw/
+*.pdf
+*.pptx
+*.docx
+*.hwp
+*-raw.*
+*.unblurred.*

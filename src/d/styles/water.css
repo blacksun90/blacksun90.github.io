@@ -1,0 +1,1168 @@
+/* 시안 D — 맑은 물. 물은 빛으로 보인다: 바탕은 커스틱이 흐르는 물, 글은 깊은 물빛, 강조는 한 가지 물색. */
+:root {
+  color-scheme: light;
+  --water-0: #f4fbfd;
+  --water-1: #e6f5f9;
+  --water-2: #d2ecf4;
+  --water-3: #b6e1ee;
+  --water-4: #8fd3e8;
+  --accent: #0a8fb0;
+  --accent-deep: #086f8a;
+  --ink: #0b3b4a;
+  --ink-soft: #3b6472;
+  --ink-faint: #6f8f9a;
+  --white: #ffffff;
+  --shadow: 0 2px 4px rgba(8, 51, 68, 0.08), 0 12px 28px rgba(8, 51, 68, 0.12);
+  --shadow-soft: 0 1px 2px rgba(8, 51, 68, 0.06), 0 6px 16px rgba(8, 51, 68, 0.08);
+  --radius: 22px;
+  --gutter: clamp(20px, 4vw, 64px);
+  --measure: 68ch;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* 물 밑 빛무늬(정적). 웅덩이 바닥과 유리창에 깐다. stitchTiles 로 타일 이음새를 맞춘다(격자 방지). */
+  --caustic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.011' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 2.4 -1.05'/%3E%3C/filter%3E%3Crect width='420' height='420' filter='url(%23c)'/%3E%3C/svg%3E");
+}
+
+body {
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--water-0) 0%, var(--water-1) 40%, var(--water-2) 100%);
+}
+
+::selection {
+  background: var(--water-4);
+  color: var(--ink);
+}
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--water-1);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--water-4);
+  border: 3px solid var(--water-1);
+  border-radius: 8px;
+}
+a {
+  color: var(--accent-deep);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1.5px;
+}
+a:hover {
+  color: var(--accent);
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+p {
+  margin: 0;
+}
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ===== 전환 층 ===== */
+.wash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+}
+.wash__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+/* 물결 모양으로 잘린 흐림 유리. 물이 지나갈 때만 켜진다(opacity 는 JS). */
+.wash__glass {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  -webkit-backdrop-filter: blur(10px) saturate(1.3) brightness(1.04);
+  backdrop-filter: blur(10px) saturate(1.3) brightness(1.04);
+  will-change: transform;
+}
+.wash__splash circle {
+  fill: var(--water-4);
+}
+.wash__ring {
+  fill: none;
+  stroke: var(--white);
+  opacity: 0;
+}
+/* 물줄기: 폭이 변하는 물 띠 + 가운데 밝은 줄 + 띠를 따라 떨어지는 방울 */
+.wash__stream {
+  fill: url(#stream-fill);
+  opacity: 0;
+}
+.wash__stream-gloss {
+  fill: var(--white);
+  opacity: 0;
+}
+.wash__beads circle {
+  fill: #7fd0e6;
+}
+.wash__deep {
+  fill: var(--accent);
+  opacity: 0.32;
+}
+.wash__wave {
+  fill: url(#wave-fill);
+  opacity: 0.86;
+}
+.wash__foam {
+  fill: var(--white);
+  opacity: 0.95;
+}
+
+/* ===== 표면 (첫 화면) ===== */
+.surface {
+  position: relative;
+  min-height: max(640px, 100vh);
+  overflow: hidden;
+}
+/* 바닥의 물(WebGL). 못 그리면 body 그라디언트가 그대로 보인다. */
+.surface__water {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.surface__water.is-on {
+  opacity: 1;
+}
+/* 물이 첫 웅덩이로 이어지는 자리 */
+.surface::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 180px;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(230, 245, 249, 0), var(--water-1));
+  pointer-events: none;
+}
+.drops {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+.drops__shade {
+  fill: rgba(8, 51, 68, 0.17);
+}
+.drops__inner {
+  fill: var(--white);
+  opacity: 0.42;
+}
+.drops__gloss {
+  fill: var(--white);
+  opacity: 0.88;
+}
+.drops__spark {
+  fill: var(--white);
+}
+.drops__rings circle {
+  fill: none;
+  stroke: var(--white);
+  stroke-width: 1.5;
+  opacity: 0.8;
+}
+
+.surface__text {
+  position: relative;
+  z-index: 2;
+  max-width: 34rem;
+  padding: clamp(80px, 14vh, 160px) var(--gutter) 0;
+}
+.surface__name {
+  font-size: clamp(2.8rem, 6.4vw, 4.8rem);
+  font-weight: 800;
+  line-height: 1.02;
+  color: var(--ink);
+}
+.surface__tagline {
+  margin-top: 18px;
+  font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.surface__tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 22px;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+.surface__tally strong {
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.surface__hint {
+  margin-top: 36px;
+  font-size: 0.95rem;
+  color: var(--accent-deep);
+}
+.surface__hint::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, var(--white), var(--water-4) 70%);
+  vertical-align: middle;
+}
+
+/* 물방울 버튼: 원 위에 얹힌 라벨. 원 자체는 SVG, 위치·드리프트는 GSAP. */
+.drops__nav {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+.drop-btn {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.drop-btn__in {
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transition: transform 0.35s var(--ease-out);
+}
+.drop-btn:hover .drop-btn__in {
+  transform: translateY(-3%);
+}
+.drop-btn:active .drop-btn__in {
+  transform: scale(0.94);
+}
+.drop-btn__label {
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.drop-btn__hint {
+  font-size: max(11px, 0.66em);
+  line-height: 1.25;
+  color: var(--ink-soft);
+}
+.drop-btn--action {
+  font-size: 13px;
+  color: var(--ink);
+}
+.drop-btn--action .drop-btn__label {
+  font-weight: 700;
+}
+.drop-btn__icon {
+  width: 1.6em;
+  height: 1.6em;
+  margin: 0 auto 2px;
+}
+
+/* ===== 작은 물방울 줄 ===== */
+.water-overview {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: var(--gutter);
+  z-index: 41;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid rgba(8, 111, 138, 0.25);
+  border-radius: 999px;
+  color: var(--accent-deep);
+  background: rgba(244, 251, 253, 0.94);
+  box-shadow: var(--shadow-soft);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.water-overview:hover { background: var(--white); }
+
+.snav {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transform: translate(140%, -50%);
+  opacity: 0;
+  transition:
+    transform 0.5s var(--ease-out),
+    opacity 0.4s ease;
+}
+.snav.is-on {
+  transform: translate(0, -50%);
+  opacity: 1;
+}
+.snav__drop {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, var(--white), var(--water-2) 40%, var(--water-4));
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition: transform 0.3s var(--ease-out);
+}
+.snav__drop:hover,
+.snav__drop:focus-visible {
+  transform: scale(1.25);
+}
+.snav__drop[aria-current='true'] {
+  background: radial-gradient(circle at 38% 32%, var(--white), var(--accent) 55%);
+}
+.snav__drop--top {
+  margin-bottom: 8px;
+  background: radial-gradient(circle at 38% 32%, var(--white), var(--ink-soft) 60%);
+}
+.snav__label {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  padding: 3px 9px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  background: var(--white);
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-50%) translateX(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s var(--ease-out);
+}
+.snav__drop:hover .snav__label,
+.snav__drop:focus-visible .snav__label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* ===== 웅덩이(섹션) ===== */
+.pool {
+  position: relative;
+  padding: clamp(72px, 10vw, 140px) var(--gutter) clamp(64px, 8vw, 120px);
+  scroll-margin-top: 0;
+  isolation: isolate;
+}
+.pool__edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  width: 100%;
+  height: clamp(28px, 5vw, 60px);
+  z-index: 1;
+}
+.pool--1 .pool__edge path {
+  fill: var(--water-1);
+}
+.pool--2 .pool__edge path {
+  fill: var(--water-2);
+}
+.pool--3 .pool__edge path {
+  fill: var(--water-3);
+}
+.pool__fill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transform-origin: bottom center;
+  transform: scaleY(0);
+  overflow: hidden;
+}
+.pool.is-filled .pool__fill {
+  transform: scaleY(1);
+}
+/* 웅덩이 바닥의 빛무늬 */
+.pool__fill::after {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  background-image: var(--caustic);
+  background-size: 420px 420px;
+  opacity: 0.42;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+.pool--1 .pool__fill {
+  background: var(--water-1);
+}
+.pool--2 .pool__fill {
+  background: var(--water-2);
+}
+.pool--2 .pool__fill::after {
+  background-position: 140px 60px;
+  opacity: 0.55;
+}
+.pool--3 .pool__fill {
+  background: var(--water-3);
+}
+.pool--3 .pool__fill::after {
+  background-position: 60px 200px;
+  opacity: 0.7;
+}
+.pool__inner {
+  position: relative;
+  z-index: 2;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.pool__head {
+  max-width: var(--measure);
+  margin-bottom: clamp(32px, 5vw, 56px);
+}
+.pool__head h2 {
+  font-size: clamp(1.8rem, 3.2vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+}
+.pool__head p {
+  margin-top: 12px;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+.pool__body h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* ===== 경력: 물길과 정거장 ===== */
+.stream {
+  position: relative;
+  display: grid;
+  gap: 28px;
+  padding-left: 34px;
+}
+.stream__line {
+  position: absolute;
+  left: 9px;
+  top: 12px;
+  width: 4px;
+  height: calc(100% - 24px);
+  overflow: visible;
+}
+.stream__line path {
+  fill: none;
+  stroke: var(--water-4);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.stream__stop {
+  position: relative;
+}
+.stream__mark {
+  position: absolute;
+  left: -34px;
+  top: 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, var(--white), var(--water-2) 40%, var(--accent));
+  box-shadow: var(--shadow-soft);
+}
+.stream__card {
+  padding: 22px 26px;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+.stream__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+.stream__title h3 {
+  font-size: 1.25rem;
+}
+.stream__period {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+  font-variant-numeric: tabular-nums;
+}
+.stream__sub {
+  margin-top: 2px;
+  font-size: 0.88rem;
+  color: var(--ink-faint);
+}
+.stream__role {
+  margin-top: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.stream__card ul {
+  max-width: var(--measure);
+  margin-top: 12px;
+  padding-left: 1.1em;
+  list-style: disc;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.stream__card li + li {
+  margin-top: 4px;
+}
+.edu {
+  margin-top: 28px;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+.stack {
+  margin-top: 48px;
+}
+.stack__list {
+  display: grid;
+  gap: 10px;
+  max-width: var(--measure);
+  margin: 14px 0 0;
+}
+.stack__row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(8, 51, 68, 0.12);
+  font-size: 0.95rem;
+}
+.stack__row dt {
+  font-weight: 700;
+  color: var(--ink);
+}
+.stack__row dd {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+/* ===== 프로젝트 ===== */
+/* 회사 고르기: 물 위에 뜬 알약. 고른 것만 물색으로 찬다. */
+.works__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.works__tab {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  color: var(--ink-soft);
+  background: var(--white);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition:
+    transform 0.3s var(--ease-out),
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.works__tab span {
+  font-weight: 800;
+}
+.works__tab small {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.works__tab:hover {
+  color: var(--ink);
+  transform: translateY(-2px);
+}
+.works__tab[aria-selected='true'] {
+  color: var(--white);
+  background: radial-gradient(circle at 30% 25%, #4fc3dd, var(--accent) 60%);
+}
+.works__tab[aria-selected='true'] small {
+  color: rgba(255, 255, 255, 0.8);
+}
+.works__panel {
+  animation: works-in 0.45s var(--ease-out);
+}
+@keyframes works-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.works__org {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  margin-bottom: 18px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.works__org strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.works {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  perspective: 1200px;
+}
+.work {
+  position: relative;
+  display: grid;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  transition:
+    transform 0.45s var(--ease-out),
+    box-shadow 0.45s var(--ease-out);
+}
+.work:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+}
+.work__text {
+  position: relative;
+  padding: 20px 24px 24px;
+}
+.work__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding-right: 72px;
+}
+.work__title h3 {
+  font-size: 1.2rem;
+}
+.work__period {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+  font-variant-numeric: tabular-nums;
+}
+.work__line {
+  margin-top: 4px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.work__detail {
+  max-width: var(--measure);
+  margin-top: 10px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.work__stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+.work__stack li {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+  background: var(--water-1);
+  border-radius: 999px;
+}
+
+/* 수위계 */
+.level {
+  position: absolute;
+  right: 20px;
+  top: 18px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.level__tube {
+  position: relative;
+  width: 12px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--water-1);
+  box-shadow: inset 0 0 0 1px rgba(8, 51, 68, 0.12);
+}
+.level__water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, var(--water-4), var(--accent));
+}
+.level__water::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+}
+.level__text {
+  display: grid;
+  line-height: 1.1;
+}
+.level__text strong {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.level__text small {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+/* ===== AI 방식: 이어진 웅덩이 ===== */
+.channel {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  margin-bottom: clamp(32px, 5vw, 56px);
+}
+.channel__pool {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 18px 16px;
+  margin-right: 28px;
+  text-align: center;
+  background: var(--white);
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+}
+.channel__pool:last-child {
+  margin-right: 0;
+}
+.channel__name {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.channel__note {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+.channel__link {
+  position: absolute;
+  right: -30px;
+  top: 50%;
+  width: 32px;
+  height: 14px;
+  overflow: visible;
+  transform: translateY(-50%);
+}
+.channel__link path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.method {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 32px var(--gutter);
+  align-items: start;
+}
+.method__principles {
+  display: grid;
+  gap: 12px;
+  max-width: var(--measure);
+  counter-reset: p;
+}
+.method__principles li {
+  position: relative;
+  padding: 14px 18px 14px 50px;
+  font-size: 1rem;
+  line-height: 1.55;
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+}
+.method__principles li::before {
+  counter-increment: p;
+  content: counter(p);
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--white);
+  background: radial-gradient(circle at 38% 32%, #4fc3dd, var(--accent) 60%);
+  border-radius: 50%;
+}
+.method__tools {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.method__tools li {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+}
+.method__tools strong {
+  font-weight: 800;
+}
+.method__tools span {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+/* ===== R&D ===== */
+.side {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+.side__item {
+  padding: 22px 26px;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+.side__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.side__period {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+  font-variant-numeric: tabular-nums;
+}
+.side__line {
+  margin-top: 4px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.side__detail {
+  max-width: var(--measure);
+  margin-top: 10px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.side__stack {
+  margin-top: 12px;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+}
+/* 항목이 더 있는 카드(brain)는 두 열을 다 쓴다 */
+.side__item--wide {
+  grid-column: 1 / -1;
+}
+.side__points {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 32px;
+  margin-top: 12px;
+  padding-left: 1.1em;
+  list-style: disc;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.side__points li::marker {
+  color: var(--accent);
+}
+
+/* ===== GitHub 기여 ===== */
+.tide {
+  padding: 24px 28px 20px;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+.calendar__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+.calendar__head h3 {
+  font-size: 1rem;
+}
+.calendar__head span {
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(53, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  gap: 3px;
+  width: 100%;
+  aspect-ratio: 53 / 7;
+}
+.calendar__day {
+  background: var(--water-1);
+  border-radius: 2px;
+}
+.calendar__day[data-level='1'] {
+  background: var(--water-3);
+}
+.calendar__day[data-level='2'] {
+  background: var(--water-4);
+}
+.calendar__day[data-level='3'] {
+  background: var(--accent);
+}
+.calendar__day[data-level='4'] {
+  background: var(--accent-deep);
+}
+.calendar__months {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  margin-top: 8px;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+}
+.calendar__empty {
+  padding: 16px 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+.tide__note {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+/* ===== 연락 ===== */
+.reach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px 32px;
+}
+.reach__mail {
+  position: relative;
+  padding: 16px 28px;
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
+  font-weight: 800;
+  color: var(--white);
+  text-decoration: none;
+  background: radial-gradient(circle at 30% 25%, #4fc3dd, var(--accent) 60%);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  transition: transform 0.35s var(--ease-out);
+}
+.reach__mail::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+}
+.pool.is-filled .reach__mail::after {
+  animation: reach-ripple 1.4s var(--ease-out) 0.9s 1;
+}
+@keyframes reach-ripple {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35, 1.9);
+  }
+}
+.reach__mail:hover,
+.reach__mail:focus-visible {
+  color: var(--white);
+  transform: translateY(-3px);
+}
+.reach__foot {
+  margin-top: 56px;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+}
+
+/* ===== 움직임을 줄인 환경 ===== */
+@media (prefers-reduced-motion: reduce) {
+  .surface__water {
+    transition: none;
+  }
+  .pool.is-filled .reach__mail::after {
+    animation: none;
+  }
+  .works__panel {
+    animation: none;
+  }
+  .work,
+  .drop-btn__in,
+  .snav,
+  .snav__drop {
+    transition: none;
+  }
+}
+
+/* ===== 390px ===== */
+@media (max-width: 760px) {
+  .surface {
+    min-height: max(720px, 100vh);
+  }
+  .surface__text {
+    max-width: none;
+    padding-top: 64px;
+  }
+  .surface__name {
+    font-size: 2.6rem;
+  }
+  .surface__hint {
+    margin-top: 22px;
+  }
+  .drop-btn__hint {
+    display: none;
+  }
+  .snav {
+    right: auto;
+    left: 50%;
+    top: auto;
+    bottom: 14px;
+    flex-direction: row;
+    gap: 12px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    box-shadow: var(--shadow-soft);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transform: translate(-50%, 140%);
+  }
+  .snav.is-on {
+    transform: translate(-50%, 0);
+  }
+  .snav__drop--top {
+    margin: 0;
+  }
+  .snav__label {
+    right: auto;
+    left: 50%;
+    top: auto;
+    bottom: 26px;
+    transform: translate(-50%, 6px);
+  }
+  .snav__drop:hover .snav__label,
+  .snav__drop:focus-visible .snav__label {
+    transform: translate(-50%, 0);
+  }
+  /* 하단 점 내비가 마지막 내용을 가리지 않게 */
+  .pool--3 {
+    padding-bottom: 120px;
+  }
+  .works,
+  .side,
+  .side__points {
+    grid-template-columns: 1fr;
+  }
+  .channel {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .channel__pool {
+    margin-right: 0;
+  }
+  .channel__link {
+    right: auto;
+    left: 50%;
+    top: auto;
+    bottom: -20px;
+    transform: translateX(-50%) rotate(90deg);
+  }
+  .method {
+    grid-template-columns: 1fr;
+  }
+  .stack__row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .stream {
+    padding-left: 26px;
+  }
+  .stream__line {
+    left: 7px;
+  }
+  .stream__mark {
+    left: -26px;
+    width: 18px;
+    height: 18px;
+  }
+  .calendar {
+    gap: 2px;
+  }
+}
