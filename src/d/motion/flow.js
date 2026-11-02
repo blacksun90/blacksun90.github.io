@@ -78,11 +78,17 @@ export function flowTo(targetId, origin, { radius = 56, onBurst, onDone } = {}) 
   }
 
   busy = true
+  // GSAP 스크롤과 CSS smooth 스크롤이 겹쳐 도착 위치가 밀리지 않도록 한다.
+  const scrollStyle = document.documentElement.style
+  const previousScrollBehavior = scrollStyle.scrollBehavior
+  scrollStyle.scrollBehavior = 'auto'
   const svg = wash.querySelector('.wash__svg')
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
   const glass = wash.querySelector('.wash__glass')
   const splash = wash.querySelector('.wash__splash')
   const ringEl = wash.querySelector('.wash__ring')
+  const echo = wash.querySelector('.wash__ring--echo')
+  const impact = wash.querySelector('.wash__impact')
   const stream = wash.querySelector('.wash__stream')
   const gloss = wash.querySelector('.wash__stream-gloss')
   const clipRect = wash.querySelector('.wash__stream-clip')
@@ -90,13 +96,17 @@ export function flowTo(targetId, origin, { radius = 56, onBurst, onDone } = {}) 
   const deep = wash.querySelector('.wash__deep')
   const wave = wash.querySelector('.wash__wave')
   const foam = wash.querySelector('.wash__foam')
+  const caustics = wash.querySelector('.wash__caustics')
+  const layers = [deep, wave, caustics, foam]
   const { x, y } = origin
 
   // 1. 충격 고리와 튀는 물방울. 물방울은 위로 튀었다가 중력에 끌려 떨어진다.
   ringEl.setAttribute('cx', x)
   ringEl.setAttribute('cy', y)
-  gsap.set(ringEl, { attr: { r: radius * 0.6, 'stroke-width': 14 }, opacity: 0.9 })
-  const n = 16
+  gsap.set(ringEl, { attr: { r: radius * 0.6, 'stroke-width': 3 }, opacity: 0.6 })
+  gsap.set(echo, { attr: { cx: x, cy: y, r: radius * 0.38, 'stroke-width': 1.4 }, opacity: 0.28 })
+  gsap.set(impact, { attr: { cx: x, cy: y, r: radius * 0.65 }, opacity: 0.42 })
+  const n = W < 760 ? 11 : 16
   const dots = []
   for (let i = 0; i < n; i++) {
     const c = document.createElementNS(svgNS, 'circle')
@@ -123,8 +133,8 @@ export function flowTo(targetId, origin, { radius = 56, onBurst, onDone } = {}) 
   clipRect.setAttribute('width', W)
   clipRect.setAttribute('y', y - radius)
   clipRect.setAttribute('height', 0)
-  gsap.set(stream, { opacity: 0.92 })
-  gsap.set(gloss, { opacity: 0.72 })
+  gsap.set(stream, { opacity: 0.65 })
+  gsap.set(gloss, { opacity: 0.42 })
 
   // 띠를 따라 떨어지는 방울들. 구이 필터 안이라 띠 근처에서 물처럼 뭉친다.
   const beads = []
@@ -140,12 +150,16 @@ export function flowTo(targetId, origin, { radius = 56, onBurst, onDone } = {}) 
   // 3. 물결 세 겹(깊은 물·물·거품)과 흐림 유리
   const d0 = waveD(W, H, 0)
   const d1 = waveD(W, H, 1)
-  for (const p of [deep, wave, foam]) p.setAttribute('d', d0)
+  for (const p of layers) p.setAttribute('d', d0)
   glass.style.clipPath = `path('${d0}')`
   glass.style.height = `${H + 300}px`
   const off = -(H + 360)
-  gsap.set([deep, wave, foam], { y: off, opacity: 1 })
-  gsap.set(glass, { y: off, opacity: 1 })
+  gsap.set(layers, { y: off })
+  gsap.set(deep, { opacity: 0.32 })
+  gsap.set(wave, { opacity: 0.7 })
+  gsap.set(caustics, { opacity: 0.2 })
+  gsap.set(foam, { opacity: 0.52 })
+  gsap.set(glass, { y: off, opacity: 0.7 })
 
   const hideStream = () => {
     gsap.set([stream, gloss], { opacity: 0 })
@@ -157,17 +171,20 @@ export function flowTo(targetId, origin, { radius = 56, onBurst, onDone } = {}) 
       dots.forEach((c) => c.remove())
       beads.forEach((b) => b.c.remove())
       hideStream()
-      gsap.set([deep, wave, foam], { y: off })
+      gsap.set(layers, { y: off, opacity: 0 })
       gsap.set(glass, { y: off, opacity: 0 })
-      gsap.set(ringEl, { opacity: 0 })
+      gsap.set([ringEl, echo, impact], { opacity: 0 })
       busy = false
       ScrollTrigger.refresh()
+      scrollStyle.scrollBehavior = previousScrollBehavior
       onDone?.()
     },
   })
 
   tl.add(() => onBurst?.(), 0)
-  tl.to(ringEl, { attr: { r: radius * 3.2, 'stroke-width': 0 }, opacity: 0, duration: 0.6, ease: 'power2.out' }, 0)
+  tl.to(ringEl, { attr: { r: radius * 3.2, 'stroke-width': 0.3 }, opacity: 0, duration: 0.7, ease: 'power2.out' }, 0)
+  tl.to(echo, { attr: { r: radius * 2.7, 'stroke-width': 0.2 }, opacity: 0, duration: 0.75, ease: 'power2.out' }, 0.12)
+  tl.to(impact, { attr: { r: radius * 2.5 }, opacity: 0, duration: 0.6, ease: 'power2.out' }, 0)
   dots.forEach((c, i) => {
     const ang = -Math.PI / 2 + (i / n - 0.5) * Math.PI * 1.5 + (Math.random() - 0.5) * 0.4
     const v = 50 + Math.random() * 90
@@ -199,19 +216,24 @@ export function flowTo(targetId, origin, { radius = 56, onBurst, onDone } = {}) 
   tl.to(glass, { y: 0, duration: 0.56, ease: 'power2.in' }, 0.38)
   tl.to(deep, { y: 28, duration: 0.6, ease: 'power2.in' }, 0.4)
   tl.to(wave, { y: 0, duration: 0.56, ease: 'power2.in' }, 0.42)
+  tl.to(caustics, { y: 8, duration: 0.58, ease: 'power2.in' }, 0.42)
   tl.to(foam, { y: -14, duration: 0.56, ease: 'power2.in' }, 0.42)
-  tl.to([deep, wave], { attr: { d: d1 }, duration: 0.5, ease: 'sine.inOut' }, 0.42)
+  tl.to([deep, wave, caustics], { attr: { d: d1 }, duration: 0.5, ease: 'sine.inOut' }, 0.42)
   tl.to(foam, { attr: { d: d1 }, duration: 0.55, ease: 'sine.inOut' }, 0.42)
+  tl.to(window, {
+    scrollTo: { y: target, offsetY: 0, autoKill: false }, duration: 0.4, ease: 'power2.inOut',
+    onComplete: () => window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY, behavior: 'instant' }),
+  }, 0.72)
   tl.add(() => {
-    window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY, behavior: 'instant' })
     history.replaceState(null, '', `#${targetId}`)
     hideStream()
-  }, 0.98)
+  }, 1.12)
   // 물이 걷힌다: 거품이 먼저, 물, 깊은 물, 유리 순으로 아래로 빠진다
   tl.to(foam, { y: H + 360, duration: 0.66, ease: 'power2.out' }, 1.02)
   tl.to(wave, { y: H + 360, duration: 0.72, ease: 'power2.out' }, 1.04)
+  tl.to(caustics, { y: H + 360, duration: 0.76, ease: 'power2.out' }, 1.04)
   tl.to(deep, { y: H + 360, duration: 0.8, ease: 'power2.out' }, 1.06)
   tl.to(glass, { y: H + 360, duration: 0.8, ease: 'power2.out' }, 1.06)
-  tl.to([deep, wave, foam], { attr: { d: d0 }, duration: 0.6, ease: 'sine.inOut' }, 1.02)
+  tl.to(layers, { attr: { d: d0 }, duration: 0.6, ease: 'sine.inOut' }, 1.02)
   return tl
 }
