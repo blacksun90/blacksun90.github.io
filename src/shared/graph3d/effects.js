@@ -63,10 +63,19 @@ export function makeParticles(links, preset, meshes, tex) {
 
 // 묶음을 감싸는 반투명 막(e-3). 볼록 껍질(ConvexGeometry) + 가장자리가 밝아지는 셰이더 — 비눗방울 같은 막.
 const HULL_VERT = `varying vec3 vN; varying vec3 vV;
-void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`
+void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalMatrix * normal; vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`
 // uStrength: 막의 세기. 투명도와 가장자리 밝기를 함께 줄여야 블룸 아래서 테두리만 빛나는 일이 없다
+// 부동소수점 오차로 |내적|이 1을 넘으면 음수의 소수 거듭제곱이 NaN이 된다.
+// 법선/시선이 0인 경우도 보호하고 pow 입력을 제한해 블룸 전체로 NaN이 번지는 것을 막는다.
 const HULL_FRAG = `uniform vec3 uColor; uniform float uOpacity; uniform float uStrength; varying vec3 vN; varying vec3 vV;
-void main(){ float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.4); float a = (0.045 + 0.5 * rim) * uOpacity * uStrength; gl_FragColor = vec4(uColor * (0.8 + 0.6 * rim * uStrength), a); }`
+void main(){
+  vec3 n = vN * inversesqrt(max(dot(vN, vN), 1e-8));
+  vec3 v = vV * inversesqrt(max(dot(vV, vV), 1e-8));
+  float facing = clamp(abs(dot(n, v)), 0.0, 1.0);
+  float rim = pow(1.0 - facing, 2.4);
+  float a = (0.045 + 0.5 * rim) * uOpacity * uStrength;
+  gl_FragColor = vec4(uColor * (0.8 + 0.6 * rim * uStrength), a);
+}`
 
 // 26방향 패딩(축 6 + 모서리 12 + 꼭짓점 8): 점이 둘셋뿐인 pod 도 부피가 생기고, 막이 각지지 않고 둥글어진다
 const DIRS = []
