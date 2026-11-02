@@ -1,12 +1,11 @@
 import { useEffect } from 'react'
 
 const key = (source) => `portfolio:overview:${source}`
-const dPath = import.meta.env.PORTFOLIO_MAIN_PATH || '/d/'
 
 export function overviewReturn() {
   const source = new URLSearchParams(window.location.search).get('from')
   const isC = source === 'c'
-  return { href: `${isC ? '/c/' : dPath}?resume=1`, label: isC ? 'C 포트폴리오로 돌아가기' : 'D 포트폴리오로 돌아가기' }
+  return { href: `${isC ? '/c/' : '/'}?resume=1`, label: isC ? 'C 포트폴리오로 돌아가기' : 'D 포트폴리오로 돌아가기' }
 }
 
 export function useOverviewReturn(source) {

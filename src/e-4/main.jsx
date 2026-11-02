@@ -5,9 +5,9 @@ import '../shared/graph/graph.css'
 import '../shared/graph3d/graph3d.css'
 import App3D from '../shared/graph3d/App3D.jsx'
 
-// 시안 E-4 — 3D 그래프(성운: 은하 + 덩어리). 엔진·패널은 공용(src/shared/graph3d, src/shared/graph), 차이는 preset 뿐.
+// E-4 — 3D 성운 그래프. C·D와 공유하는 내용을 탐색한다.
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App3D variant="e-4" />
+    <App3D />
   </React.StrictMode>,
 )

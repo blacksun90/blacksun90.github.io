@@ -1,60 +1,5 @@
-// 시안 E-1·E-2·E-3 — 옵시디언 3D 그래프 플러그인 세 가지의 콘셉트. 엔진은 하나(engine.js)고 셋의 차이는 이 값뿐이다.
-//   e-1  New 3D Graph  : 종류별 도형, 선을 따라 흐르는 입자
-//   e-2  3D Graph      : 구슬 + 빛무리 + 별 배경 + 블룸(은하)
-//   e-3  Semantic Graph: 묶음을 감싸는 반투명 막, 기술을 공유하는 프로젝트끼리 끌어당김
+// E-4 성운 그래프 설정. 프로젝트 색·간격·기술 숨김은 공개 화면에서 사용하는 값이다.
 export const PRESETS = {
-  'e-1': {
-    key: 'e-1',
-    tag: 'E-1',
-    name: '도형과 입자',
-    shapes: true,
-    particles: 'all', // 모든 선에 입자
-    glow: 'none',
-    bloom: false,
-    stars: 0,
-    hulls: false,
-    similarity: false,
-    drift: true, // 점이 제자리에서 아주 천천히 흔들린다
-    autoRotate: 0.45, // 도/초 느낌의 OrbitControls 속도. 0 이면 끔
-    lights: true,
-    linkAlpha: 0.3,
-    additiveLinks: false,
-  },
-  'e-2': {
-    key: 'e-2',
-    tag: 'E-2',
-    name: '은하',
-    shapes: false,
-    particles: 'none',
-    glow: 'full',
-    bloom: true,
-    stars: 1800,
-    hulls: false,
-    similarity: false,
-    drift: true,
-    autoRotate: 0.55,
-    lights: false,
-    linkAlpha: 0.2,
-    additiveLinks: true,
-  },
-  'e-3': {
-    key: 'e-3',
-    tag: 'E-3',
-    name: '덩어리',
-    shapes: false,
-    particles: 'selection', // 고른 점의 선에서만
-    glow: 'soft',
-    bloom: false,
-    stars: 0,
-    hulls: true,
-    similarity: true,
-    drift: false, // 막을 다시 계산하지 않으려고 점은 고정
-    autoRotate: 0.3,
-    lights: true,
-    linkAlpha: 0.26,
-    additiveLinks: false,
-  },
-  //   e-4  은하 + 덩어리   : E-2 의 빛무리·별·블룸에 E-3 의 막(약하게)·기술 유사도. 프로젝트 점은 회사와 다른 색(장미)
   'e-4': {
     key: 'e-4',
     tag: 'E-4',
@@ -92,5 +37,5 @@ export const colorOf = (node, preset) => (preset?.projectColor && node.type === 
 // 묶음 색 — graph.css 토큰과 같은 값
 export const COLOR = { me: '#ffffff', career: '#37d3ff', skill: '#b36bff', ai: '#ffc857', rd: '#5ff0c0' }
 export const BG = '#0b1020'
-// 2D(E) 반지름 → 3D 단위. 선 길이(36~88)에 맞춘 축척.
+// 그래프 데이터의 반지름을 3D 단위로 변환한다.
 export const R_SCALE = 0.5

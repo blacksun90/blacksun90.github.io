@@ -9,9 +9,9 @@ import { overviewReturn } from '../OverviewLink.jsx'
 const HULL_LABEL = { on: '막 켬', hover: '막 올릴 때', off: '막 끔' }
 const NEXT_HULL = { on: 'hover', hover: 'off', off: 'on' }
 
-// 시안 E-1·E-2·E-3 의 화면. E(App.jsx)와 같은 뼈대 — 상단·검색·범례·그래프·패널. 차이는 Graph3D 와 preset.
-export default function App3D({ variant }) {
-  const preset = PRESETS[variant]
+// E-4 성운 탐색 화면: 상단·검색·범례·그래프·상세 패널.
+export default function App3D() {
+  const preset = PRESETS['e-4']
   const back = overviewReturn()
   const graph = useMemo(() => buildGraph(), [])
   const [selected, setSelected] = useState('me')
@@ -42,9 +42,9 @@ export default function App3D({ variant }) {
   }, [query, graph])
 
   return (
-    <div className={`site site--3d${variant === 'e-4' ? ' site--overview' : ''}${node ? ' has-panel' : ''}`}>
+    <div className={`site site--3d site--overview${node ? ' has-panel' : ''}`}>
       <header className="top">
-        {variant === 'e-4' && <a className="top__back" href={back.href}>← {back.label}</a>}
+        <a className="top__back" href={back.href}>← {back.label}</a>
         <div className="top__who">
           <h1 className="top__name">{profile.name}</h1>
           <p className="top__role">

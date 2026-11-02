@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createEngine } from './engine.js'
 
-// React 는 마운트와 상태만 넘긴다. 그리기는 engine.js(three.js). E 의 GraphView 와 같은 역할.
+// React 는 마운트와 상태만 넘긴다. 그리기는 engine.js(three.js)가 맡는다.
 export default function Graph3D({ graph, preset, selected, query, hullMode, onSelect }) {
   const ref = useRef(null)
   const eng = useRef(null)
@@ -46,7 +46,7 @@ export default function Graph3D({ graph, preset, selected, query, hullMode, onSe
     return (
       <div className="g3-fallback" role="alert">
         <p>이 환경에서는 3D 그래프를 그릴 수 없어요.</p>
-        <a href="/e/">2D 그래프로 보기</a>
+        <a href="/c/">C 포트폴리오로 보기</a>
       </div>
     )
   }

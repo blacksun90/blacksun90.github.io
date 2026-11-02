@@ -18,17 +18,6 @@ if (import.meta.env.DEV) {
   }
 }
 
-// 마커로 글씨를 쓰듯 왼쪽에서 오른쪽으로 드러낸다. 글자 수에 따라 길이가 달라진다.
-export function markerWrite(el, { delay = 0, perChar = 0.045, min = 0.5, max = 1.6 } = {}) {
-  const len = (el.textContent || '').trim().length
-  const duration = Math.min(max, Math.max(min, len * perChar))
-  return gsap.fromTo(
-    el,
-    { clipPath: 'inset(-10% 100% -10% -2%)' },
-    { clipPath: 'inset(-10% -2% -10% -2%)', duration, delay, ease: 'power2.inOut' },
-  )
-}
-
 // SVG 획을 그린다(stroke-dashoffset).
 export function drawStroke(path, { duration = 0.7, delay = 0 } = {}) {
   const len = path.getTotalLength()
