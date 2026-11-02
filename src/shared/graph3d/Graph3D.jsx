@@ -46,9 +46,9 @@ export default function Graph3D({ graph, preset, selected, query, hullMode, onSe
     return (
       <div className="g3-fallback" role="alert">
         <p>이 환경에서는 3D 그래프를 그릴 수 없어요.</p>
-        <a href="/c/">C 포트폴리오로 보기</a>
+        <a href="/c/">포트폴리오로 보기</a>
       </div>
     )
   }
-  return <div ref={ref} className="g3" aria-label="포트폴리오 3D 그래프 — 점을 고르면 오른쪽에 내용이 열립니다" />
+  return <div ref={ref} className="g3" aria-label="포트폴리오 3D 그래프 — 점을 고르면 상세 내용이 열립니다" />
 }

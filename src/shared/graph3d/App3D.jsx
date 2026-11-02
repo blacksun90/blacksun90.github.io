@@ -14,10 +14,18 @@ export default function App3D() {
   const preset = PRESETS['e-4']
   const back = overviewReturn()
   const graph = useMemo(() => buildGraph(), [])
-  const [selected, setSelected] = useState('me')
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches)
+  const [selected, setSelected] = useState(() => window.matchMedia('(max-width: 760px)').matches ? null : 'me')
   const [query, setQuery] = useState('')
   const [hullMode, setHullMode] = useState('on')
   const node = selected ? graph.byId.get(selected) : null
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)')
+    const change = () => setMobile(media.matches)
+    media.addEventListener('change', change)
+    return () => media.removeEventListener('change', change)
+  }, [])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -48,9 +56,6 @@ export default function App3D() {
         <div className="top__who">
           <h1 className="top__name">{profile.name}</h1>
           <p className="top__role">
-            <span className="top__tag">
-              {preset.tag} · {preset.name}
-            </span>
             {profile.role}
           </p>
         </div>
@@ -92,11 +97,11 @@ export default function App3D() {
       </header>
 
       <main className="stage">
-        <Graph3D graph={graph} preset={preset} selected={selected} query={query} hullMode={hullMode} onSelect={setSelected} />
+        <Graph3D key={mobile ? 'mobile' : 'desktop'} graph={graph} preset={preset} selected={selected} query={query} hullMode={hullMode} onSelect={setSelected} />
         <p className="stage__hint">점을 누르면 오른쪽에 내용이 열려요 · 끌어서 돌리기, 휠로 확대, 오른쪽 버튼으로 옮기기 · Esc 닫기 · ? 소개</p>
       </main>
 
-      <Panel node={node} onSelect={setSelected} onClose={() => setSelected(null)} />
+      <Panel node={node} fullscreen={mobile} onSelect={setSelected} onClose={() => setSelected(null)} />
     </div>
   )
 }

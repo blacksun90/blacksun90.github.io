@@ -31,6 +31,8 @@ export function createEngine(container, graph, preset, { onSelect }) {
   const links = graph.links.filter((l) => !hidden(endOf(l.source)) && !hidden(endOf(l.target)))
   const view = { nodes, links, byId, neighbors }
   layout(view, preset)
+  // 세로 화면에서는 회사 묶음을 위아래로 펼쳐 제목이 놓일 공간을 확보한다.
+  if (NARROW()) for (const n of nodes) { n.x *= 0.65; n.y *= 1.45; n.z *= 0.65 }
 
   // ----- 렌더러·장면·카메라 -----
   const renderer = new WebGLRenderer({ antialias: !preset.bloom, alpha: !preset.bloom, powerPreference: 'high-performance' })
@@ -133,7 +135,7 @@ export function createEngine(container, graph, preset, { onSelect }) {
         it.label = !NARROW() || touched // 좁은 화면의 낮은 띠에선 이름표가 겹치므로 고른·올린 묶음만
       }
     }
-    controls.autoRotate = preset.autoRotate > 0 && !reduced && (!sel || sel === 'me') && !interacted
+    controls.autoRotate = preset.autoRotate > 0 && !NARROW() && !reduced && (!sel || sel === 'me') && !interacted
   }
   const setHover = (id) => {
     if (state.hover === id) return
@@ -229,7 +231,7 @@ export function createEngine(container, graph, preset, { onSelect }) {
   // ----- 등장: 카메라는 조금 먼 데서 다가오고, 점은 사람에서 바깥으로(BFS 깊이) 맺힌다 -----
   const depth = bfsDepth(graph)
   let intro = null
-  const f0 = frame('me', true, true)
+  const f0 = frame(NARROW() ? null : 'me', !NARROW(), true)
   if (!reduced) {
     const dir = camera.position.clone().sub(controls.target).normalize()
     camera.position.copy(controls.target).addScaledVector(dir, f0.distance * 1.35)
@@ -258,7 +260,7 @@ export function createEngine(container, graph, preset, { onSelect }) {
     const hasPanel = !!document.querySelector('.panel')
     if (camIntro && camIntro.isActive()) {
       const remain = Math.max(0.6, camIntro.duration() - camIntro.time())
-      const f = frameParams('me', hasPanel)
+      const f = frameParams(state.selected, hasPanel)
       camIntro.kill()
       controls.target.copy(f.target)
       camIntro = gsap.to(camera.position, { x: f.position.x, y: f.position.y, z: f.position.z, duration: remain, ease: 'expo.out', onUpdate: () => controls.update() })
@@ -286,6 +288,7 @@ export function createEngine(container, graph, preset, { onSelect }) {
     if (composer) composer.render()
     else renderer.render(scene, camera)
     css2d.render(scene, camera)
+    labels.declutter(availRect(W, H, false))
   }
   const tick = (now) => {
     raf = requestAnimationFrame(tick)

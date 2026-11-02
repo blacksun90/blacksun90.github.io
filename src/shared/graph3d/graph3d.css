@@ -117,19 +117,7 @@
   --c: #ff6fb5;
 }
 
-/* 상단: 시안 표시 칩, 막 토글 */
-.top__tag {
-  display: inline-block;
-  margin-right: 8px;
-  padding: 1px 8px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--fg);
-  vertical-align: 1px;
-  border: 1px solid rgba(160, 178, 255, 0.3);
-  border-radius: 999px;
-}
+/* 묶음 막 표시 */
 .hull-toggle {
   padding: 3px 10px;
   font-size: 0.76rem;
@@ -199,17 +187,61 @@
 }
 @media (max-width: 760px) {
   .g3-label {
-    font-size: 10px;
+    max-width: 150px;
+    padding: 4px 7px;
+    font-size: 13px;
+    line-height: 1.35;
+    white-space: normal;
+    text-wrap: balance;
+    background: rgba(11, 16, 32, 0.9);
+    border: 1px solid rgba(160, 178, 255, 0.22);
+    opacity: 1;
+    pointer-events: auto;
   }
-  /* 낮은 띠에서 멀리 볼 때는 허브 이름표도 숨긴다(겹침). 사람·선택·이웃·호버·일치는 그대로 */
+  /* 제목은 카메라 거리와 관계없이 읽을 수 있게 유지한다. */
   .g3.is-far .g3-label--on:not(.g3-label--person):not(.is-selected):not(.is-near):not(.is-hover):not(.is-hover-near):not(.is-match) {
-    opacity: 0;
-    pointer-events: none;
+    opacity: 1;
+    pointer-events: auto;
   }
   .g3-label--person {
-    font-size: 13px;
+    font-size: 14px;
   }
   .g3-pod {
-    font-size: 10px;
+    display: none;
   }
+}
+
+dialog.panel:not([open]) { display: none; }
+.panel--fullscreen {
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 20px 20px max(24px, env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: 0;
+  background: #101733;
+  overscroll-behavior: contain;
+}
+.panel--fullscreen::backdrop { background: #101733; }
+.panel--fullscreen .panel__bar {
+  position: sticky;
+  top: -20px;
+  z-index: 1;
+  margin: -20px -20px 16px;
+  padding: max(12px, env(safe-area-inset-top)) 20px 12px;
+  background: #101733;
+  border-bottom: 1px solid rgba(160, 178, 255, 0.18);
+}
+.panel--fullscreen .panel__close {
+  width: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--fg);
+  background: rgba(160, 178, 255, 0.1);
 }

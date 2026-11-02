@@ -8,17 +8,26 @@ const REDUCED = () => window.matchMedia('(prefers-reduced-motion: reduce)').matc
 const years = (period) => period.replace(/\.\d{2}/g, '').replace('현재', '').trim()
 
 // 오른쪽 패널. 노드 종류마다 그리는 법이 다르다. 내용은 전부 site.js 에서.
-export default function Panel({ node, onSelect, onClose }) {
+export default function Panel({ node, fullscreen = false, onSelect, onClose }) {
   const ref = useRef(null)
   const headRef = useRef(null)
+
+  // 네이티브 모달은 배경 조작·Tab 이탈을 막고 닫을 때 원래 포커스를 돌려준다.
+  useEffect(() => {
+    const el = ref.current
+    if (!node || !fullscreen || !el) return
+    el.showModal()
+    return () => el.close()
+  }, [!!node, fullscreen])
 
   useEffect(() => {
     if (!node || !ref.current) return
     const el = ref.current
-    if (REDUCED()) gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.2 })
+    el.scrollTop = 0
+    if (REDUCED() || fullscreen) gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.2 })
     else gsap.fromTo(el, { x: 28, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: 'expo.out', clearProps: 'transform' })
     headRef.current?.focus({ preventScroll: true })
-  }, [node?.id])
+  }, [node?.id, fullscreen])
 
   if (!node) return null
   const Go = ({ id, children, className = 'panel__link' }) => (
@@ -239,12 +248,25 @@ export default function Panel({ node, onSelect, onClose }) {
     )
   }
 
+  const Container = fullscreen ? 'dialog' : 'aside'
+  const keepFocus = (event) => {
+    if (!fullscreen || event.key !== 'Tab') return
+    const controls = [...ref.current.querySelectorAll('button, a[href], input, [tabindex]')].filter((el) => el.tabIndex >= 0 && !el.disabled)
+    if (!controls.length) return
+    const first = controls[0]
+    const last = controls[controls.length - 1]
+    if (event.shiftKey && (document.activeElement === first || !controls.includes(document.activeElement))) {
+      event.preventDefault(); last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault(); first.focus()
+    }
+  }
   return (
-    <aside className="panel" ref={ref} aria-label="선택한 항목">
+    <Container className={`panel${fullscreen ? ' panel--fullscreen' : ''}`} ref={ref} aria-label="선택한 항목" aria-modal={fullscreen ? true : undefined} onKeyDown={keepFocus} onCancel={(event) => { event.preventDefault(); onClose() }}>
       <div className="panel__bar">
         <span className="panel__type">{labelOf(node)}</span>
-        <button type="button" className="panel__close" onClick={onClose} aria-label="닫기">
-          ×
+        <button type="button" className="panel__close" onClick={onClose} aria-label={fullscreen ? '그래프로 돌아가기' : '닫기'}>
+          {fullscreen ? '← 그래프로 돌아가기' : '×'}
         </button>
       </div>
       <h2 className="panel__title" tabIndex={-1} ref={headRef}>
@@ -257,7 +279,7 @@ export default function Panel({ node, onSelect, onClose }) {
           <Go id="me">처음으로</Go> · {years(companies[0].period)} 기준
         </p>
       )}
-    </aside>
+    </Container>
   )
 }
 

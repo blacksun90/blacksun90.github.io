@@ -5,7 +5,7 @@ const key = (source) => `portfolio:overview:${source}`
 export function overviewReturn() {
   const source = new URLSearchParams(window.location.search).get('from')
   const isC = source === 'c'
-  return { href: `${isC ? '/c/' : '/'}?resume=1`, label: isC ? 'C 포트폴리오로 돌아가기' : 'D 포트폴리오로 돌아가기' }
+  return { href: `${isC ? '/c/' : '/'}?resume=1`, label: '포트폴리오로 돌아가기' }
 }
 
 export function useOverviewReturn(source) {

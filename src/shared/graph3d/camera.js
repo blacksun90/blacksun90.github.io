@@ -10,8 +10,7 @@ export function availRect(W, H, hasPanel) {
   const top = document.querySelector('.top')?.getBoundingClientRect().bottom || cssPx('--top-h', 72)
   const panel = hasPanel ? document.querySelector('.panel')?.getBoundingClientRect() : null
   if (NARROW()) {
-    const bottom = panel ? panel.top - 8 : hasPanel ? H * 0.38 : H
-    return { x: 0, y: top, w: W, h: Math.max(120, bottom - top) }
+    return { x: 0, y: top, w: W, h: Math.max(120, H - top) }
   }
   const right = panel ? panel.left - 16 : hasPanel ? W - cssPx('--panel-w', 440) - 48 : W
   return { x: 0, y: top, w: Math.max(240, right), h: H - top }
